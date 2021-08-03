@@ -18,26 +18,27 @@ import os
 
 # Fungsi import dataset utama
 def importEmptyMainDataset():
-    return pd.read_excel("dataset/data_acuan.xlsx")
+    return pd.read_excel("Pemeriksa Ketepatan Waktu Update/dataset/data_acuan.xlsx")
+
+# Fungsi untuk mendapatkan nama file excel
+def getExcelFileName(excelFile):
+    return [item for item in excelFile.split("\\")][-1]
 
 # Fungsi Mengisi dataset utama dengan informasi file-file yang diawasi
 def fillEmptyMainDataset(mainDataset, listOfExcelFile):
     pass
 
-# Fungsi untuk mendapatkan nama file excel
-def getExcelFileName(excelFile):
-    pass
-
 # Fungsi traverse directory mulai dari parent untuk menemukan file dengan format '.xlsx'
 def exploreDirectory():
     path = 'C:\Computer Science\PKL'
-    listOfFiles = []
+    listOfFile = []
     for root, dirs, files in os.walk(path):
         for file in files:
             if file.endswith(".xlsx"):
-                 listOfFiles.append(os.path.join(root, file))
+                 listOfFile.append(os.path.join(root, file))
+
     
-    return listOfFiles
+    return listOfFile
     
     # extension = 'xlsx'
     # os.chdir(path)
