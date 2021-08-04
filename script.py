@@ -65,62 +65,50 @@ def monthNum(month):
 def reMonthName():
     return "Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember"
 
-# Fungsi yang memberikan regex untuk mencari bulan berbentuk angka pada suatu string
-def reMonthNum():
-    return "01|02|03|04|05|06|07|08|09|10|11|12"
-
 # Fungsi yang memberikan regex untuk mencari tahun 4 digit pada suatu string
 def reYear4Digits():
     return "[1-3][0-9]{3}"
 
-# Fungsi yang memberikan regex untuk mencari tahun 2 digit pada suatu string
-def reYear2Digits():
-    return "[1-3][0-9]"
+# Fungsi yang memberikan regex untuk mencari bulan dan tahun berbentuk angka pada suatu string 
+def reMonthAndYear():
+    return "[0-1][0-9][1-3][0-9]"
 
 # Fungsi untuk mengubah tahun dari nama file ke bentuk umumnya (year) 
 def formattingYear4Digits(fileName, hasYear4Digits):
     return fileName.replace(hasYear4Digits[0], 'year')
 
-# Fungsi untuk mengubah tahun dari nama file ke bentuk umumnya (yy) 
-def formattingYear2Digits(fileName, hasYear4Digits):
-    return fileName.replace(hasYear4Digits[0], 'yy')
-
 # Fungsi untuk mengubah nama bulan dari nama file ke bentuk umumnya (month) 
 def formattingMonthName(fileName, hasMonthName):
     return fileName.replace(hasMonthName[0], 'month')
 
-# Fungsi untuk mengubah angka bulan dari nama file ke bentuk umumnya (mm) 
-def formattingMonthNum(fileName, hasMonthNum):
-    return fileName.replace(hasMonthNum[0], 'mm')
-
-# Fungsi untuk format bulan di nama file
-def formattingMonthInFileName(fileName):
-    if re.findall(reMonthName(), fileName):
-        fileName =  formattingMonthName(fileName, re.findall(reMonthName(), fileName))
-    elif re.findall(reMonthNum(), fileName):
-        fileName =  formattingMonthNum(fileName, re.findall(reMonthNum(), fileName))
-
-    return fileName
-
-# Fungsi untuk format tahun di nama file
-def formattingYearInFileName(fileName):
-    if re.findall(reYear4Digits(), fileName):
-        fileName = formattingYear4Digits(fileName, re.findall(reYear4Digits(), fileName))
-    elif re.findall(reYear2Digits(), fileName):
-        fileName = formattingYear2Digits(fileName, re.findall(reYear2Digits(), fileName))
-
-    return fileName
+# Fungsi untuk mengubah bulan dan tahun dari nama file ke bentuk umumnya (mmyy) 
+def formattingMonthAndYear(fileName, hasMonthAndYear):
+    return fileName.replace(hasMonthAndYear[0], 'mmyy')
 
 # Fungsi untuk generalisasi nama file yang memiliki isi yang sama. Misal file dengan nama "Laporan Keuangan 0221", akan menjadi "Laporan Keuangan mmyy" dimana
 # mm adalah bulan dan yy adalah tahun
 def formattingFileName(fileName):
-    return formattingYearInFileName(formattingMonthInFileName(fileName))
+    hasMonthName = re.findall(reMonthName(), fileName)
+    hasYear = re.findall(reYear4Digits(), fileName)
+    hasMonthAndYear = re.findall(reMonthAndYear(), fileName)
+
+    if hasMonthName:
+        fileName =  formattingMonthName(fileName, hasMonthName)
+    if hasYear:
+        fileName = formattingYear4Digits(fileName, hasYear)
+    elif hasMonthAndYear:
+        fileName = formattingMonthAndYear(fileName, hasMonthAndYear)
+    return fileName
 
 # ====================================================== Fungsi-Fungsi Datetime ======================================================
 
-#Fungsi untuk menemukan file paling terupdate untuk kasus file yang diupdate dengan cara "append new file"
-def findLatestFile(fileName, latestFileNum):
-    return fileName, latestFileNum
+#Fungsi untuk menemukan file paling terupdate pada bagian bulan untuk kasus file yang diupdate dengan cara "append new file"
+def compareMonth(newFileName, latestFileName):
+    pass
+
+#Fungsi untuk menemukan file paling terupdate pada bagian tahun untuk kasus file yang diupdate dengan cara "append new file"
+def compareYear(newFileName, latestFileName):
+    pass
 
 # ====================================================== Fungsi-Fungsi Utama ======================================================
 
@@ -135,7 +123,6 @@ def fillEmptyMainDataset(mainDataset, listOfExcelFile):
             mainDataset.loc[len(mainDataset.index)] = [fileNameFormatted, fileName , i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
         else:
             mainDataset.at[len(mainDataset.index)-1, 'Modification_Type'] = 'Update By Adding A New File'
-            fileName, latestFileNum = findLatestFile(fileName, latestFileNum)
 
     return mainDataset
 
