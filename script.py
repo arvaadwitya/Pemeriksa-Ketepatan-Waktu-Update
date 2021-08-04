@@ -11,6 +11,7 @@ Fungsi Pendukung: - Fungsi eksplorasi direktori untuk mendapatkan nama-nama file
 """
 
 # ====================================================== Import Library ======================================================
+
 import pandas as pd
 from openpyxl import load_workbook
 import os
@@ -18,6 +19,7 @@ import pytz
 import re
 
 # ====================================================== Variabel Global ======================================================
+
 monthDict = {'Januari': 1, 'Februari': 2, 'Maret': 3, 'April': 4, 'Mei': 5, 'Juni': 6, 'Juli': 7,
                 'Agustus': 8, 'September': 9, 'Oktober': 10, 'November': 11, 'Desember': 12}
 
@@ -53,28 +55,64 @@ def exploreDirectory():
     return listOfFile
 
 
-# ====================================================== Fungsi-Fungsi Proses String Nama File ======================================================
+# ====================================================== Fungsi-Fungsi Memproses String Nama File ======================================================
 
 # Fungsi konversi nama bulan ke bentuk numerik (Januari = 1, Februari = 2, etc)
 def monthNum(month):
     return monthDict[month]
 
 # Fungsi yang memberikan regex untuk mencari bulan pada suatu string
-def reMonth():
+def reMonthName():
     return "Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember"
 
-# Fungsi untuk mengubah bulan dari nama file ke bentuk umumnya (month) 
-def formattingMonthName(fileName):
-    hasMonth = re.findall(reMonth(), fileName)
-    if hasMonth:
-        return fileName.replace(hasMonth[0], 'month')
-    else:
-        return fileName
+# Fungsi yang memberikan regex untuk mencari bulan berbentuk angka pada suatu string
+def reMonthNum():
+    return "01|02|03|04|05|06|07|08|09|10|11|12"
+
+# Fungsi yang memberikan regex untuk mencari tahun 4 digit pada suatu string
+def reYear4Digits():
+    return "[1-3][0-9]{3}"
+
+# Fungsi yang memberikan regex untuk mencari tahun 2 digit pada suatu string
+def reYear2Digits():
+    return "[1-3][0-9]"
+
+# Fungsi untuk mengubah tahun dari nama file ke bentuk umumnya (year) 
+def formattingYear4Digits(fileName, hasYear4Digits):
+    return fileName.replace(hasYear4Digits[0], 'year')
+
+# Fungsi untuk mengubah tahun dari nama file ke bentuk umumnya (yy) 
+def formattingYear2Digits(fileName, hasYear4Digits):
+    return fileName.replace(hasYear4Digits[0], 'yy')
+
+# Fungsi untuk mengubah nama bulan dari nama file ke bentuk umumnya (month) 
+def formattingMonthName(fileName, hasMonthName):
+    return fileName.replace(hasMonthName[0], 'month')
+
+# Fungsi untuk mengubah angka bulan dari nama file ke bentuk umumnya (mm) 
+def formattingMonthNum(fileName, hasMonthNum):
+    return fileName.replace(hasMonthNum[0], 'mm')
 
 # Fungsi untuk generalisasi nama file yang memiliki isi yang sama. Misal file dengan nama "Laporan Keuangan 0221", akan menjadi "Laporan Keuangan mmyy" dimana
 # mm adalah bulan dan yy adalah tahun
 def formattingFileName(fileName):
-    pass
+    hasMonthName = re.findall(reMonthName(), fileName)
+    hasMonthNum = re.findall(reMonthNum(), fileName)
+    hasYear4Digits = re.findall(reYear4Digits(), fileName)
+
+    if hasMonthName:
+        fileName =  formattingMonthName(fileName, hasMonthName)
+    elif hasMonthNum:
+        fileName =  formattingMonthNum(fileName, hasMonthNum)
+
+    hasYear2Digits = re.findall(reYear2Digits(), fileName)
+    
+    if hasYear4Digits:
+        fileName = formattingYear4Digits(fileName, hasYear4Digits)
+    elif hasYear2Digits:
+        fileName = formattingYear2Digits(fileName, hasYear2Digits)
+
+    return fileName
 
 # ====================================================== Fungsi-Fungsi Utama ======================================================
 
@@ -84,9 +122,13 @@ def fillEmptyMainDataset(mainDataset, listOfExcelFile):
         wb = load_workbook(i)
         fileName = getExcelFileName(i)
         fileName = formattingFileName(fileName)
-        mainDataset.loc[len(mainDataset.index)] = [fileName, i, '', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
+        if fileName not in mainDataset.File_Name.values:
+            mainDataset.loc[len(mainDataset.index)] = [fileName, i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
+        else:
+            mainDataset.at[len(mainDataset.index)-1, 'Modification_Type'] = 'Update By Adding A New File'
     return mainDataset
 
+# ====================================================== Fungsi Main ======================================================
 
 # Fungsi Main
 if __name__ == "__main__":
