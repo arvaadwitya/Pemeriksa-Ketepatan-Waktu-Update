@@ -6,7 +6,7 @@ Fungsi Utama: - Dapat mengisi dataset acuan yang berisi list file excel yang dia
               - Dapat diintegrasikan dengan Power BI []
 
 Fungsi Pendukung: - Fungsi eksplorasi direktori untuk mendapatkan nama-nama file excel dan propertynya secara otomatis dari directory file tersebut disimpan [X]
-                  - Fungsi memproses string nama file untuk file yang cara updatenya adalah menambahkan file baru []
+                  - Fungsi memproses string nama file untuk file yang cara updatenya adalah menambahkan file baru [X]
                   - Fungsi memproses datetime untuk pencocokan target waktu dan realisasi []
 """
 
@@ -93,39 +93,50 @@ def formattingMonthName(fileName, hasMonthName):
 def formattingMonthNum(fileName, hasMonthNum):
     return fileName.replace(hasMonthNum[0], 'mm')
 
+# Fungsi untuk format bulan di nama file
+def formattingMonthInFileName(fileName):
+    if re.findall(reMonthName(), fileName):
+        fileName =  formattingMonthName(fileName, re.findall(reMonthName(), fileName))
+    elif re.findall(reMonthNum(), fileName):
+        fileName =  formattingMonthNum(fileName, re.findall(reMonthNum(), fileName))
+
+    return fileName
+
+# Fungsi untuk format tahun di nama file
+def formattingYearInFileName(fileName):
+    if re.findall(reYear4Digits(), fileName):
+        fileName = formattingYear4Digits(fileName, re.findall(reYear4Digits(), fileName))
+    elif re.findall(reYear2Digits(), fileName):
+        fileName = formattingYear2Digits(fileName, re.findall(reYear2Digits(), fileName))
+
+    return fileName
+
 # Fungsi untuk generalisasi nama file yang memiliki isi yang sama. Misal file dengan nama "Laporan Keuangan 0221", akan menjadi "Laporan Keuangan mmyy" dimana
 # mm adalah bulan dan yy adalah tahun
 def formattingFileName(fileName):
-    hasMonthName = re.findall(reMonthName(), fileName)
-    hasMonthNum = re.findall(reMonthNum(), fileName)
-    hasYear4Digits = re.findall(reYear4Digits(), fileName)
+    return formattingYearInFileName(formattingMonthInFileName(fileName))
 
-    if hasMonthName:
-        fileName =  formattingMonthName(fileName, hasMonthName)
-    elif hasMonthNum:
-        fileName =  formattingMonthNum(fileName, hasMonthNum)
+# ====================================================== Fungsi-Fungsi Datetime ======================================================
 
-    hasYear2Digits = re.findall(reYear2Digits(), fileName)
-    
-    if hasYear4Digits:
-        fileName = formattingYear4Digits(fileName, hasYear4Digits)
-    elif hasYear2Digits:
-        fileName = formattingYear2Digits(fileName, hasYear2Digits)
-
-    return fileName
+#Fungsi untuk menemukan file paling terupdate untuk kasus file yang diupdate dengan cara "append new file"
+def findLatestFile(fileName, latestFileNum):
+    return fileName, latestFileNum
 
 # ====================================================== Fungsi-Fungsi Utama ======================================================
 
 # Fungsi Mengisi dataset utama dengan informasi file-file excel
 def fillEmptyMainDataset(mainDataset, listOfExcelFile):
+    latestFileNum = 0
     for i in listOfExcelFile:
         wb = load_workbook(i)
         fileName = getExcelFileName(i)
-        fileName = formattingFileName(fileName)
-        if fileName not in mainDataset.File_Name.values:
-            mainDataset.loc[len(mainDataset.index)] = [fileName, i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
+        fileNameFormatted = formattingFileName(fileName)
+        if fileNameFormatted not in mainDataset.File_Name.values:
+            mainDataset.loc[len(mainDataset.index)] = [fileNameFormatted, fileName , i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
         else:
             mainDataset.at[len(mainDataset.index)-1, 'Modification_Type'] = 'Update By Adding A New File'
+            fileName, latestFileNum = findLatestFile(fileName, latestFileNum)
+
     return mainDataset
 
 # ====================================================== Fungsi Main ======================================================
