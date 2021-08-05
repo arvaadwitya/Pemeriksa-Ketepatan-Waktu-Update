@@ -17,6 +17,7 @@ from openpyxl import load_workbook
 import os
 import pytz
 import re
+import datetime
 
 # ====================================================== Variabel Global ======================================================
 
@@ -38,6 +39,10 @@ def utcToLocal(time):
 # Fungsi import dataset utama
 def importEmptyMainDataset():
     return pd.read_excel("Pemeriksa Ketepatan Waktu Update\dataset\data_acuan.xlsx")
+
+# Fungsi import dataset utama yang telah diisi
+def importFilledMainDataset():
+    return pd.read_excel("output.xlsx")
 
 # Fungsi untuk mendapatkan nama file excel yang sudah dipisah dengan pathnya
 def getExcelFileName(excelFile):
@@ -102,19 +107,28 @@ def formattingFileName(fileName):
 
 # ====================================================== Fungsi-Fungsi Datetime ======================================================
 
-#Fungsi untuk menemukan file paling terupdate pada bagian bulan untuk kasus file yang diupdate dengan cara "append new file"
-def compareMonth(newFileName, latestFileName):
-    pass
+# Fungsi utama untuk menemukan file paling terupdate untuk kasus file yang diupdate dengan cara "append new file"
+# Mengembalikan True jika file yang sedang diperiksa adalah file terupdate dari pada file yang sudah terdata di file acuan
+def compareFilesDatetime(newFileDate, latestFileDate):
+    return newFileDate > latestFileDate
 
-#Fungsi untuk menemukan file paling terupdate pada bagian tahun untuk kasus file yang diupdate dengan cara "append new file"
-def compareYear(newFileName, latestFileName):
-    pass
+# Fungsi membandingkan tanggal. True jika berada di tanggal yang sama
+def compareDate(fileRealizationTime):
+    currentDate = utcToLocal(datetime.datetime.now())
+    return currentDate.day == fileRealizationTime.day
+
+# Fungsi membandingkan jam dan menit
+def compareHour(fileTime, fileRealizationTime):
+    fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+    if compareDate(fileRealizationTime):
+        if fileTime.hour < fileRealizationTime.hour:
+            return True
+    return False
 
 # ====================================================== Fungsi-Fungsi Utama ======================================================
 
 # Fungsi Mengisi dataset utama dengan informasi file-file excel
 def fillEmptyMainDataset(mainDataset, listOfExcelFile):
-    latestFileNum = 0
     for i in listOfExcelFile:
         wb = load_workbook(i)
         fileName = getExcelFileName(i)
@@ -123,15 +137,48 @@ def fillEmptyMainDataset(mainDataset, listOfExcelFile):
             mainDataset.loc[len(mainDataset.index)] = [fileNameFormatted, fileName , i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
         else:
             mainDataset.at[len(mainDataset.index)-1, 'Modification_Type'] = 'Update By Adding A New File'
-
+            lastModifiedNewFile = utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S")
+            if compareFilesDatetime(lastModifiedNewFile, mainDataset.iloc[len(mainDataset.index)-1]['Realisasi']):
+                mainDataset.loc[len(mainDataset.index)-1] = [fileNameFormatted, fileName , i, 'Update By Adding A New File', wb.properties.lastModifiedBy, '', '', '', lastModifiedNewFile, '']
     return mainDataset
+
+# Fungsi proses pengisian kolom SLA (Kategoriasi)
+def slaCategorizationProcess(rowData):
+    if rowData['Update_Periode'] == "Daily":
+        fileTime = re.findall('\d{2}:\d{2}', rowData['Target_Update'])
+        fileTime = datetime.datetime.strptime(fileTime[0], '%H:%M')
+        if compareHour(fileTime, rowData['Realisasi']):
+            return "Miss"
+        else:
+            return "Met"
+    elif rowData['Update_Periode'] == "Monthly":
+        pass
+    elif rowData['Update_Periode'] == "Yearly":
+        pass
+
+# Fungsi utama pengisian kolom SLA (Kategoriasi)
+def slaCategorization(mainDataset):
+    for index, rowData in mainDataset.iterrows():
+        mainDataset.at[index, 'SLA_(Met/Miss)'] = slaCategorizationProcess(rowData)
+    return mainDataset
+
 
 # ====================================================== Fungsi Main ======================================================
 
 # Fungsi Main
 if __name__ == "__main__":
-    mainDataset = importEmptyMainDataset()
-    listOfExcelFile = exploreDirectory()
-    mainDataset = fillEmptyMainDataset(mainDataset, listOfExcelFile)
-    mainDataset.to_excel('output.xlsx', index=False)
+
+    #Proses mengisi data target 
+    # mainDataset = importEmptyMainDataset()
+    # listOfExcelFile = exploreDirectory()
+    # mainDataset = fillEmptyMainDataset(mainDataset, listOfExcelFile)
+    # mainDataset.to_excel('output.xlsx', index=False)
+
+    # Proses kategorisasi SLA
+    mainDataset = importFilledMainDataset()
+    mainDataset = mainDataset.astype(str)
+    mainDataset = slaCategorization(mainDataset)
+    mainDataset.to_excel('output2.xlsx', index=False)
+    
+    
     
