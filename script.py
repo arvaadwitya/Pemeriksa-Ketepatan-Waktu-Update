@@ -112,6 +112,18 @@ def formattingFileName(fileName):
 def compareFilesDatetime(newFileDate, latestFileDate):
     return newFileDate > latestFileDate
 
+# Fungsi untuk membandingkan tahun dan tanggal file dengan waktu sekarang. True jika telat
+def compareMonthDay(FileTargetMonth, fileTargetDay, fileRealizationTime):
+    currentDate = utcToLocal(datetime.datetime.now())
+    fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+    if currentDate.year == fileRealizationTime.year:
+        if fileRealizationTime.month == FileTargetMonth:
+            if fileRealizationTime.day > fileTargetDay:
+                return True
+        elif fileRealizationTime.month > FileTargetMonth:
+            return True
+    return False
+                
 # Fungsi membandingkan tanggal. True jika berada di tanggal yang sama
 def compareDate(fileRealizationTime):
     currentDate = utcToLocal(datetime.datetime.now())
@@ -145,16 +157,21 @@ def fillEmptyMainDataset(mainDataset, listOfExcelFile):
 # Fungsi proses pengisian kolom SLA (Kategoriasi)
 def slaCategorizationProcess(rowData):
     if rowData['Update_Periode'] == "Daily":
-        fileTime = re.findall('\d{2}:\d{2}', rowData['Target_Update'])
-        fileTime = datetime.datetime.strptime(fileTime[0], '%H:%M')
-        if compareHour(fileTime, rowData['Realisasi']):
+        fileTargetTime = re.findall('\d{2}:\d{2}', rowData['Target_Update'])
+        fileTargetTime = datetime.datetime.strptime(fileTargetTime[0], '%H:%M')
+        if compareHour(fileTargetTime, rowData['Realisasi']):
             return "Miss"
         else:
             return "Met"
     elif rowData['Update_Periode'] == "Monthly":
         pass
     elif rowData['Update_Periode'] == "Yearly":
-        pass
+        fileTargetMonth = monthNum(re.findall(reMonthName(), rowData['Target_Update'])[0])
+        fileTargetDay = int(re.findall("[0-2][0-9]|[0-9]", rowData['Target_Update'])[0])
+        if compareMonthDay(fileTargetMonth, fileTargetDay, rowData['Realisasi']):
+            return "Miss"
+        else:
+            return "Met"
 
 # Fungsi utama pengisian kolom SLA (Kategoriasi)
 def slaCategorization(mainDataset):
