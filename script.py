@@ -123,6 +123,46 @@ def formattingFileName(fileName):
 def compareFilesDatetime(newFileDate, latestFileDate):
     return newFileDate > latestFileDate
 
+# Fungsi untuk memeriksa tanggal realisasi di kasus "Biweekly". True jika telat
+def compareBiweekly():
+    pass
+
+# Fungsi untuk memeriksa tanggal realisasi di kasus "Quarterly". True jika telat
+def compareQuarter(fileTargetDate, fileRealizationTime):
+    currentDate = utcToLocal(datetime.datetime.now())
+    fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+
+    if currentDate.month >= fileRealizationTime.month:
+        if fileRealizationTime.month in [1, 4, 7, 10]:
+            if fileRealizationTime.day > fileTargetDate:
+                return True
+    # if currentDate.month >= 1 and currentDate.month <= 3:
+    #     if fileRealizationTime.month == 1:
+    #         if fileRealizationTime.day > fileTargetDate:
+    #             return True
+    #     elif fileRealizationTime.month > 1:
+    #         return True
+
+    # elif currentDate.month >= 4 and currentDate.month <= 6:
+    #     if fileRealizationTime.month == 4:
+    #         if fileRealizationTime.day > fileTargetDate:
+    #             return True
+    #     elif fileRealizationTime.month > 4:
+    #         return True
+
+    # elif currentDate.month >= 7 and currentDate.month <= 9:
+    #     if fileRealizationTime.month == 7:
+    #         if fileRealizationTime.day > fileTargetDate:
+    #             return True
+    #     elif fileRealizationTime.month > 7:
+    #         return True
+            
+    # elif fileRealizationTime.month >= 10 and (fileRealizationTime.month <= 12 or fileRealizationTime.month == 1):
+    #     if fileRealizationTime.month == 1:
+    #         if fileRealizationTime.day > fileTargetDate:
+    #             return True
+    return False
+
 # Fungsi untuk membandinkan nama hari dari target_update dan hari realisasi
 def compareDayName(fileTargetDay, fileRealizationTime):
     currentDate = utcToLocal(datetime.datetime.now())
@@ -164,13 +204,13 @@ def compareMonthDay(FileTargetMonth, fileTargetDay, fileRealizationTime):
 # Fungsi membandingkan tanggal. True jika berada di tanggal yang sama
 def compareDate(fileRealizationTime):
     currentDate = utcToLocal(datetime.datetime.now())
-    return currentDate.day == fileRealizationTime.day
+    return currentDate.day >= fileRealizationTime.day
 
 # Fungsi membandingkan jam dan menit
 def compareHour(fileTime, fileRealizationTime):
     fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
-    
     if compareDate(fileRealizationTime):
+        
         if fileTime.hour < fileRealizationTime.hour:
             return True
     
@@ -224,7 +264,11 @@ def slaCategorizationProcess(rowData):
             return "Met"
 
     elif rowData['Update_Periode'] == "Quarterly":
-        pass
+        fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
+        if compareQuarter(fileTargetDay, rowData['Realisasi']):
+            return "Miss"
+        else:
+            return "Met"
 
     elif rowData['Update_Periode'] == "Yearly":
         fileTargetMonth = monthNum(re.findall(reMonthName(), rowData['Target_Update'])[0])
@@ -247,11 +291,11 @@ def slaCategorization(mainDataset):
 # Fungsi Main
 if __name__ == "__main__":
 
-    #Proses mengisi data target 
-    # mainDataset = importEmptyMainDataset()
-    # listOfExcelFile = exploreDirectory()
-    # mainDataset = fillEmptyMainDataset(mainDataset, listOfExcelFile)
-    # mainDataset.to_excel('output.xlsx', index=False)
+    # Proses mengisi data target 
+    mainDataset = importEmptyMainDataset()
+    listOfExcelFile = exploreDirectory()
+    mainDataset = fillEmptyMainDataset(mainDataset, listOfExcelFile)
+    mainDataset.to_excel('output.xlsx', index=False)
 
     # Proses kategorisasi SLA
     mainDataset = importFilledMainDataset()
