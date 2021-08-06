@@ -112,7 +112,19 @@ def formattingFileName(fileName):
 def compareFilesDatetime(newFileDate, latestFileDate):
     return newFileDate > latestFileDate
 
-# Fungsi untuk membandingkan tahun dan tanggal file dengan waktu sekarang. True jika telat
+# Fungsi untuk mmembandingkan tanggal file dengan target waktu. True jika telat
+def compareDay(fileTargetDay, fileRealizationDay):
+    currentDate = utcToLocal(datetime.datetime.now())
+    fileRealizationTime = datetime.datetime.strptime(fileRealizationDay, "%Y-%m-%d %H:%M:%S")
+    if currentDate.month == fileRealizationTime.month:
+        if fileRealizationTime.day > fileTargetDay:
+            return True
+    elif currentDate.month > fileRealizationTime.month:
+        if fileRealizationTime.day > fileTargetDay:
+            return True
+    return False
+
+# Fungsi untuk membandingkan tahun dan tanggal file dengan target waktu. True jika telat
 def compareMonthDay(FileTargetMonth, fileTargetDay, fileRealizationTime):
     currentDate = utcToLocal(datetime.datetime.now())
     fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
@@ -164,10 +176,14 @@ def slaCategorizationProcess(rowData):
         else:
             return "Met"
     elif rowData['Update_Periode'] == "Monthly":
-        pass
+        fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
+        if compareDay(fileTargetDay, rowData['Realisasi']):
+            return "Miss"
+        else:
+            return "Met"
     elif rowData['Update_Periode'] == "Yearly":
         fileTargetMonth = monthNum(re.findall(reMonthName(), rowData['Target_Update'])[0])
-        fileTargetDay = int(re.findall("[0-2][0-9]|[0-9]", rowData['Target_Update'])[0])
+        fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
         if compareMonthDay(fileTargetMonth, fileTargetDay, rowData['Realisasi']):
             return "Miss"
         else:
