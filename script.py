@@ -24,6 +24,9 @@ import datetime
 monthDict = {'Januari': 1, 'Februari': 2, 'Maret': 3, 'April': 4, 'Mei': 5, 'Juni': 6, 'Juli': 7,
                 'Agustus': 8, 'September': 9, 'Oktober': 10, 'November': 11, 'Desember': 12}
 
+# Mulai dari 0 karena fungsi weekday() dari modul datetime, mulai dari 0 (senin = 0)
+dayDict = {'Senin': 0, 'Selasa': 1, 'Rabu': 2, 'Kamis': 3, 'Jumat': 4, 'Sabtu': 5, 'Minggu': 6}
+
 #monthList = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 # ====================================================== Fungsi-Fungsi Pendukung ======================================================
@@ -65,6 +68,14 @@ def exploreDirectory():
 # Fungsi konversi nama bulan ke bentuk numerik (Januari = 1, Februari = 2, etc)
 def monthNum(month):
     return monthDict[month]
+
+# Fungsi konversi nama hari ke bentuk numerik (Senin = 1, Selasa = 2, etc)
+def dayNum(day):
+    return dayDict[day]
+
+# Fungsi yang memberikan regex mencari nama hari pada suatu string
+def reDayName():
+    return "Senin|Selasa|Rabu|Kamis|Jumat|Sabtu|Minggu"
 
 # Fungsi yang memberikan regex untuk mencari bulan pada suatu string
 def reMonthName():
@@ -112,28 +123,42 @@ def formattingFileName(fileName):
 def compareFilesDatetime(newFileDate, latestFileDate):
     return newFileDate > latestFileDate
 
+# Fungsi untuk membandinkan nama hari dari target_update dan hari realisasi
+def compareDayName(fileTargetDay, fileRealizationTime):
+    currentDate = utcToLocal(datetime.datetime.now())
+    fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+    day = fileRealizationTime.weekday()
+
+    if currentDate.isocalendar()[1] >= fileRealizationTime.isocalendar()[1] and currentDate.year == fileRealizationTime.year:
+        if day > fileTargetDay:
+            return True
+    
+    return False
+
+
 # Fungsi untuk mmembandingkan tanggal file dengan target waktu. True jika telat
 def compareDay(fileTargetDay, fileRealizationDay):
     currentDate = utcToLocal(datetime.datetime.now())
     fileRealizationTime = datetime.datetime.strptime(fileRealizationDay, "%Y-%m-%d %H:%M:%S")
-    if currentDate.month == fileRealizationTime.month:
+    
+    if currentDate.month >= fileRealizationTime.month:
         if fileRealizationTime.day > fileTargetDay:
             return True
-    elif currentDate.month > fileRealizationTime.month:
-        if fileRealizationTime.day > fileTargetDay:
-            return True
+
     return False
 
 # Fungsi untuk membandingkan tahun dan tanggal file dengan target waktu. True jika telat
 def compareMonthDay(FileTargetMonth, fileTargetDay, fileRealizationTime):
     currentDate = utcToLocal(datetime.datetime.now())
     fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+    
     if currentDate.year == fileRealizationTime.year:
         if fileRealizationTime.month == FileTargetMonth:
             if fileRealizationTime.day > fileTargetDay:
                 return True
         elif fileRealizationTime.month > FileTargetMonth:
             return True
+    
     return False
                 
 # Fungsi membandingkan tanggal. True jika berada di tanggal yang sama
@@ -144,9 +169,11 @@ def compareDate(fileRealizationTime):
 # Fungsi membandingkan jam dan menit
 def compareHour(fileTime, fileRealizationTime):
     fileRealizationTime = datetime.datetime.strptime(fileRealizationTime, "%Y-%m-%d %H:%M:%S")
+    
     if compareDate(fileRealizationTime):
         if fileTime.hour < fileRealizationTime.hour:
             return True
+    
     return False
 
 # ====================================================== Fungsi-Fungsi Utama ======================================================
@@ -157,13 +184,16 @@ def fillEmptyMainDataset(mainDataset, listOfExcelFile):
         wb = load_workbook(i)
         fileName = getExcelFileName(i)
         fileNameFormatted = formattingFileName(fileName)
+        
         if fileNameFormatted not in mainDataset.File_Name.values:
             mainDataset.loc[len(mainDataset.index)] = [fileNameFormatted, fileName , i, 'Update Existing File', wb.properties.lastModifiedBy, '', '', '', utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S"), '']
         else:
             mainDataset.at[len(mainDataset.index)-1, 'Modification_Type'] = 'Update By Adding A New File'
             lastModifiedNewFile = utcToLocal(wb.properties.modified).strftime("%Y-%m-%d %H:%M:%S")
+            
             if compareFilesDatetime(lastModifiedNewFile, mainDataset.iloc[len(mainDataset.index)-1]['Realisasi']):
                 mainDataset.loc[len(mainDataset.index)-1] = [fileNameFormatted, fileName , i, 'Update By Adding A New File', wb.properties.lastModifiedBy, '', '', '', lastModifiedNewFile, '']
+    
     return mainDataset
 
 # Fungsi proses pengisian kolom SLA (Kategoriasi)
@@ -175,18 +205,27 @@ def slaCategorizationProcess(rowData):
             return "Miss"
         else:
             return "Met"
+
     elif rowData['Update_Periode'] == "Weekly":
-        pass
+        fileTargetDay = dayNum(re.findall(reDayName(), rowData['Target_Update'])[0])
+        if compareDayName(fileTargetDay, rowData['Realisasi']):
+            return "Miss"
+        else:
+            return "Met"
+
     elif rowData['Update_Periode'] == "Biweekly":
         pass
+
     elif rowData['Update_Periode'] == "Monthly":
         fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
         if compareDay(fileTargetDay, rowData['Realisasi']):
             return "Miss"
         else:
             return "Met"
+
     elif rowData['Update_Periode'] == "Quarterly":
         pass
+
     elif rowData['Update_Periode'] == "Yearly":
         fileTargetMonth = monthNum(re.findall(reMonthName(), rowData['Target_Update'])[0])
         fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
@@ -199,6 +238,7 @@ def slaCategorizationProcess(rowData):
 def slaCategorization(mainDataset):
     for index, rowData in mainDataset.iterrows():
         mainDataset.at[index, 'SLA_(Met/Miss)'] = slaCategorizationProcess(rowData)
+    
     return mainDataset
 
 
@@ -218,6 +258,7 @@ if __name__ == "__main__":
     mainDataset = mainDataset.astype(str)
     mainDataset = slaCategorization(mainDataset)
     mainDataset.to_excel('output2.xlsx', index=False)
+    
     
     
     
