@@ -175,12 +175,18 @@ def slaCategorizationProcess(rowData):
             return "Miss"
         else:
             return "Met"
+    elif rowData['Update_Periode'] == "Weekly":
+        pass
+    elif rowData['Update_Periode'] == "Biweekly":
+        pass
     elif rowData['Update_Periode'] == "Monthly":
         fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
         if compareDay(fileTargetDay, rowData['Realisasi']):
             return "Miss"
         else:
             return "Met"
+    elif rowData['Update_Periode'] == "Quarterly":
+        pass
     elif rowData['Update_Periode'] == "Yearly":
         fileTargetMonth = monthNum(re.findall(reMonthName(), rowData['Target_Update'])[0])
         fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
