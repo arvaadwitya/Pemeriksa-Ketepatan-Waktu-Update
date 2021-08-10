@@ -7,7 +7,7 @@ Fungsi Utama: - Dapat mengisi dataset acuan yang berisi list file excel yang dia
 
 Fungsi Pendukung: - Fungsi eksplorasi direktori untuk mendapatkan nama-nama file excel dan propertynya secara otomatis dari directory file tersebut disimpan [X]
                   - Fungsi memproses string nama file untuk file yang cara updatenya adalah menambahkan file baru [X]
-                  - Fungsi memproses datetime untuk pencocokan target waktu dan realisasi []
+                  - Fungsi memproses datetime untuk pencocokan target waktu dan realisasi [X]
 """
 
 # ====================================================== Import Library ======================================================
@@ -122,38 +122,38 @@ def formattingFileName(fileName):
 
 # ====================================================== Fungsi-Fungsi Khusus untuk Kasus "Quarterly" ======================================================
 
-# Fungsi untuk mengetahui ada berapa sheet di satu file Excel
-def checkExcelSheet(sourceFile):
-    ef = pd.ExcelFile(sourceFile)
-    if len(ef.sheet_names) > 1:
-        return True
-    return False
+# # Fungsi untuk mengetahui ada berapa sheet di satu file Excel
+# def checkExcelSheet(sourceFile):
+#     ef = pd.ExcelFile(sourceFile)
+#     if len(ef.sheet_names) > 1:
+#         return True
+#     return False
 
-# Fungsi untuk mendapatkan dataframe berisi laporan quarter
-def getQuarterSheet(sourceFile):
-    s = "Q|q|quarter|Quarter|triwulan|Triwulan"
-    ef = pd.ExcelFile(sourceFile)
-    quarter = ""
-    for i in ef.sheet_names:
-        isQuarter = re.findall(s, i)
-        if isQuarter:
-            quarter = i
+# # Fungsi untuk mendapatkan dataframe berisi laporan quarter
+# def getQuarterSheet(sourceFile):
+#     s = "Q|q|quarter|Quarter|triwulan|Triwulan"
+#     ef = pd.ExcelFile(sourceFile)
+#     quarter = ""
+#     for i in ef.sheet_names:
+#         isQuarter = re.findall(s, i)
+#         if isQuarter:
+#             quarter = i
     
-    return quarter
+#     return quarter
 
-# Fungsi membuat dataframe untuk sheet quarter memakai nama sheet
-def getQuarterReportBySheetName(quarterSheet, sourceFile):
-    return pd.read_excel(sourceFile, quarterSheet) 
+# # Fungsi membuat dataframe untuk sheet quarter memakai nama sheet
+# def getQuarterReportBySheetName(quarterSheet, sourceFile):
+#     return pd.read_excel(sourceFile, quarterSheet) 
 
-# Fungsi membuat dataframe untuk membuka excel file yang hanya ada 1 sheet saja
-def getQuarterReport(sourceFile):
-    return pd.read_excel(sourceFile)
+# # Fungsi membuat dataframe untuk membuka excel file yang hanya ada 1 sheet saja
+# def getQuarterReport(sourceFile):
+#     return pd.read_excel(sourceFile)
 
-# Fungsi untuk mengetahui laporan quarter mana yang belum dilaporkan
-def checkEmptyQuarter(quarterReport):
-    print(quarterReport)
-    if len(quarterReport.columns) == 4:
-        return 1
+# # Fungsi untuk mengetahui laporan quarter mana yang belum dilaporkan
+# def checkEmptyQuarter(quarterReport):
+#     print(quarterReport)
+#     if len(quarterReport.columns) == 4:
+#         return 1
         
 
 # ====================================================== Fungsi-Fungsi Datetime ======================================================
@@ -172,31 +172,9 @@ def compareQuarter(fileTargetDate, fileRealizationTime):
         if fileRealizationTime.month in [1, 4, 7, 10]:
             if fileRealizationTime.day > fileTargetDate:
                 return True
-    # if currentDate.month >= 1 and currentDate.month <= 3:
-    #     if fileRealizationTime.month == 1:
-    #         if fileRealizationTime.day > fileTargetDate:
-    #             return True
-    #     elif fileRealizationTime.month > 1:
-    #         return True
-
-    # elif currentDate.month >= 4 and currentDate.month <= 6:
-    #     if fileRealizationTime.month == 4:
-    #         if fileRealizationTime.day > fileTargetDate:
-    #             return True
-    #     elif fileRealizationTime.month > 4:
-    #         return True
-
-    # elif currentDate.month >= 7 and currentDate.month <= 9:
-    #     if fileRealizationTime.month == 7:
-    #         if fileRealizationTime.day > fileTargetDate:
-    #             return True
-    #     elif fileRealizationTime.month > 7:
-    #         return True
-            
-    # elif fileRealizationTime.month >= 10 and (fileRealizationTime.month <= 12 or fileRealizationTime.month == 1):
-    #     if fileRealizationTime.month == 1:
-    #         if fileRealizationTime.day > fileTargetDate:
-    #             return True
+        elif fileRealizationTime.month in [2, 5, 8, 11]:
+            return True
+    
     return False
 
 # Fungsi untuk membandinkan nama hari dari target_update dan hari realisasi
@@ -298,14 +276,6 @@ def slaCategorizationProcess(rowData):
 
     elif rowData['Update_Periode'] == "Quarterly":
         fileTargetDay = int(re.findall("[0-3][0-9]|[0-9]", rowData['Target_Update'])[0])
-        isMoreThanOneSheets = checkExcelSheet(rowData['Source_File'])
-        if isMoreThanOneSheets:
-            quarterSheet = getQuarterSheet(rowData['Source_File'])
-            quarterReport = getQuarterReportBySheetName(quarterSheet, rowData['Source_File'])
-        else:
-            quarterReport = getQuarterReport(rowData['Source_File'])
-        emptyQuarter = checkEmptyQuarter(quarterReport)
-        print(emptyQuarter)
         if compareQuarter(fileTargetDay, rowData['Realisasi']):
             return "Miss"
         else:
